@@ -1,0 +1,395 @@
+---
+title: "Progetto di Analisi Vendite Immobiliari"
+author: "Eugenio Pasqua"
+date: "2023-10-31"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# 1) Scarica il dataset
+
+```{r}
+dati_immobiliari <- read.csv("./realestate_texas.csv")
+attach(dati_immobiliari)
+```
+
+# 2) Indica il tipo di variabili contenute nel dataset. 
+
+Le principali variabili presenti nel dataset sono le seguenti :
+  
+ -  city: città (variabile qualitativa nominale)
+ -  year: anno di riferimento (variabile qualitativa ordinale)
+ -  month: mese di riferimento (variabile qualitativa ordinale)
+ -  sales: numero totale di vendite (variabile quantitativa discreta)
+ -  volume: valore totale delle vendite in milioni di dollari (variabile quantitativa continua)
+ -  median_price: prezzo mediano di vendita in dollari (variabile quantitativa continua)
+ -  listings: numero totale di annunci attivi (variabile quantitativa discreta)
+ -  months_inventory: quantità di tempo necessaria per vendere tutte le inserzioni correnti al ritmo attuale delle vendite, espresso in mesi. (variabile quantitativa continua)
+  
+  
+# 3) Calcola Indici di posizione, variabilità e forma per tutte le variabili per le quali ha senso farlo, per le altre crea una distribuzione di frequenza. 
+
+**Indici di posizione : **
+```{r}
+sapply(dati_immobiliari[, c("sales", "volume", "median_price", "listings", "months_inventory")], summary)
+```
+<br>
+<br>
+**Indici di variabilità : **
+<br><br>
+
+Sales = Range sul numero totale di vendite nei 5 anni e nelle città di riferimento e suo interquartile
+```{r}
+range(sales) 
+IQR(sales)
+```
+ 
+Volume = Range sul valore totale delle vendite in milioni di dollari  nelle città in analisi del dataset e nei 5 anni e suo interquartile 
+```{r}
+range(volume)
+IQR(volume)
+``` 
+
+Median_Price = prezzo mediano di ciascuna singola vendita nei 5 anni e nelle città di riferimento e suo interquartile 
+```{r} 
+range(median_price)
+IQR(median_price)
+```
+
+Listings = Range degli annunci attivi nei 5 anni e nelle città di riferimento e suo interquartile 
+```{r}
+range(listings) 
+IQR(listings)
+```
+
+Month_inventory =  Range del ritmo di vendite espressi in mesi nei 5 anni di osservazione e nelle 4 città e suo interquartile 
+```{r}
+range(months_inventory) 
+IQR(months_inventory)
+```
+<br><br>   
+   
+**Coefficiente di variazione : ** <br>
+
+Il coefficiente di variazione riscala in percentuale l'indice di variazione per un confronto diretto tra le varie variabili di osservazioni. <br>
+Cio consente dunque di poter fare un confronto quale tra esse ha una maggiore varianza o meno:
+```{r}
+CV <- function(x) {
+  return(sd(x)/mean(x)*100)        
+}
+      
+CV(sales) # CV Sales
+CV(volume) # CV Volume
+CV(median_price) #CV Median price
+CV(listings)  # CV Listings
+CV(months_inventory) # CV Month inventory
+```
+
+Da quanto mostrato sopra la variabile che presenta maggiore variabilità è la variabile d'osservazione "Volume" nei 5 anni e nelle città di riferimento.
+<br>
+<br><br>
+**Distribuzione di frequenza ** <br>
+
+Procedo a creare una distribuzione di frequenza per le variabili city, month e year:
+<br><br>
+City - frequenze assolute e relative :
+```{r}
+df <- table(city)
+df_freq <- t(t(df))
+df_freq <- as.data.frame.matrix(df_freq)
+names(df_freq)[1] <- "Freq_assoluta"
+df_freq['Freq_rel'] <- df_freq['Freq_assoluta'] / length(table(city))
+
+print(df_freq)
+```
+<br><br>
+Month - frequenze assolute e relative :
+```{r}
+df <- table(month)
+df_freq <- t(t(df))
+df_freq <- as.data.frame.matrix(df_freq)
+names(df_freq)[1] <- "Freq_assoluta"
+df_freq['Freq_rel'] <- df_freq['Freq_assoluta'] / length(table(month))
+
+print(df_freq)
+```
+<br><br>
+Year - frequenze assolute e relative :
+```{r}
+df <- table(year)
+df_freq <- t(t(df))
+df_freq <- as.data.frame.matrix(df_freq)
+names(df_freq)[1] <- "Freq_assoluta"
+df_freq['Freq_rel'] <- df_freq['Freq_assoluta'] / length(table(year))
+
+print(df_freq)
+```
+<br>
+<br>
+     
+# 4) Quale è la variabile con variabilità piu elevata? Come ci sei arrivato? e quale quella piu asimmetrica?
+  
+<br><br>
+La variabile con una variabilità piu elevata è il "volume" ed ho utilizzato il coefficiente di variazione visto in precedenza che consente di rilevare la variabilità in termini % consentendo un confronto tra differenti variabili di osservazione del dataset.
+<br><br>
+Per il calcolo dell'asimmetria utilizziamo il calcolo dell'asimmetria di fisher:
+
+```{r}
+indice_fisher <- function(x){
+mu <-mean(x)
+sigma <- sd(x)
+n <- length(x)
+m3 <- sum((x-mu)^3)/n
+Asim.index <- m3 / sigma^3 
+return (Asim.index)
+}    
+
+indice_fisher(sales)
+indice_fisher(volume) # Riporta la maggiore asimmetria positiva 
+indice_fisher(median_price)
+indice_fisher(listings)
+indice_fisher(months_inventory)
+```
+Come riportato sopra la variabile "Volume" riporta un asimmetria positiva.
+
+<br><br>
+
+# 5) Dividi una delle variabili quantitative in classi, scegli tu quale e come, costruisci la distribuzione di frequenze, il grafico a barre corrispondente e infine calcola l’indice di Gini. 
+
+<br><br>
+       
+Mi creo una distribuzione di frequenze creando classi per la variabile volume
+```{r}
+delta <- max(volume)-min(volume)          
+segmentazione <- seq(0,max(volume),length.out=6)
+fasce_volumi <- cut(volume, breaks=segmentazione)
+dati_immobiliari$fasce_volumi <- fasce_volumi
+```
+<br>Mi calcolo ora la distribuzione di frequenze assolute e relative
+```{r}
+c <- table(fasce_volumi)
+ni <- table(fasce_volumi)
+fi <- table(fasce_volumi)/sum(c)*100
+```
+<br><br>
+Mi creo il grafico a barre
+```{r}
+  library(ggplot2)
+  ggplot(data=dati_immobiliari)+
+  geom_bar(aes(x=fasce_volumi),stat="count",col="yellow",fill="blue")+
+  labs(title="Distribuzione delle classi il valore totale delle vendite",x="Classi in Mln $",y="Frequenze assolute")+
+  theme_classic()
+```
+
+<br><br>
+Mi calcolo l'indice di Gini
+```{r}
+gini.index <- function(x) {
+ni = table(x)
+fi= ni/length(x)
+fi2 = fi^2
+J = length(table(x))
+
+gini = 1-sum(fi2)
+gini_normalizzato = gini/((J-1)/J)
+return (gini_normalizzato)
+}
+
+gini.index(volume) # Ci indica che esiste un eterogeneità massima
+```
+
+L'indice come mostrato sopra indica che esiste un eterogeneità massima.
+<br><br>
+
+# 6) Indovina l’indice di gini per la variabile city.
+<br><br>
+Utilizzo la funzione appena realizzata :
+```{r}
+gini.index(city)  
+```
+ La variabile rileva una equidistribuzione negli anni e mesi quindi le rilevazioni sono equamente distribuite tra le 4 città nel tempo di rilevazione (5 anni per 12 mesi ciascuno). 
+ <br><br>
+ 
+        
+# 7) Qual è la probabilità che presa una riga a caso di questo dataset ... :
+<br>
+a) Riporti la città “Beaumont”? 
+```{r}
+df <- table(city)
+pob_Beamount <- df['Beaumont'] / sum(df)  
+pob_Beamount <- pob_Beamount*100
+print(pob_Beamount)
+```
+<br>
+b) Riporti il mese di Luglio? 
+```{r}
+df <- table(month)
+pob_Luglio <- df['7'] /sum(df)  
+pob_Luglio <- pob_Luglio*100
+print(pob_Luglio)
+```
+<br>
+c) Riporti il mese di dicembre 2012?
+```{r}
+df <- table(month,year)
+prob_dic_2012 = df[12,"2012"] / sum(df) *100
+print(prob_dic_2012)  
+```
+
+<br><br>
+
+# 8) Esiste una colonna col prezzo mediano, creane una che indica invece il prezzo medio, utilizzando le altre variabili che hai a disposizione.
+
+<br><br>
+
+Ecco di seguito il codice per la definizione della nuova colonna sul dataframe:
+```{r}
+dati_immobiliari['prezzo_medio'] = dati_immobiliari['volume'] / dati_immobiliari['sales']
+dati_immobiliari['prezzo_medio'] = dati_immobiliari['prezzo_medio']*1000000
+```
+
+
+<br><br>
+
+# 9) Prova a creare un’altra colonna che dia un’idea di “efficacia” degli annunci di vendita. Riesci a fare qualche considerazione?
+<br>
+Innanzitutto procedo a crearmi un campo colonna sul dataframe
+```{r}
+dati_immobiliari['kpi'] = dati_immobiliari['listings'] / dati_immobiliari['months_inventory']
+```
+<br>
+Ora proviamo a creare un grafico con x le città , y anni e il valore del kpi
+
+```{r}
+library(ggplot2)
+ggplot(data=dati_immobiliari,aes(x=city,y=kpi))+
+stat_summary(fun.y = "mean", geom = "bar") +
+ggtitle("Analisi efficacia vendite per città")+
+xlab("Città")+
+ylab("Kpi (Annunci su media mese di vendita)")
+```
+<br><br>
+Nella Città di Tyler le vendite hanno maggiore efficacia seguito dalla città di Bryan-College Station<br>
+```{r}
+df_Tyler <- dati_immobiliari[city=="Tyler",]
+library(ggplot2)
+ggplot(data=df_Tyler,aes(x=year,y=kpi))+
+stat_summary(fun.y = "mean", geom = "bar") +
+ggtitle("Analisi efficacia vendite per anno") +
+xlab("Anno")+
+ylab("Kpi (Annunci su media mese di vendita)")
+```
+<br><br>
+Si rileva un tasso di crescita dell'efficacia delle vendite a partire dal 2012 fino al 2014 dopo il ribasso avuto tra il 2010 e il 2011
+
+<br><br>
+
+# 10) Prova a creare dei summary(), o semplicemente media e deviazione standard, di alcune variabili a tua scelta, condizionatamente alla città, agli anni e ai mesi. 
+<br><br>
+Sotto la definizione dei grafici previsti:
+```{r}
+install.packages("dplyr")
+library(dplyr)
+
+df_elaborato <- dati_immobiliari %>% group_by(city) %>% summarise (
+  sum_sales = sum(sales),
+  mean_sales = mean(sales),
+  dev_std_sales = sd(sales),
+  sum_volume = sum(volume),
+  mean_volume = mean(volume),
+  dev_std_volume = sd(volume)
+)
+
+ggplot(df_elaborato,aes(x="",y=sum_sales,fill=city))+
+  geom_bar(stat="identity", width=1)+
+  coord_polar("y", start=0)+
+  labs(title="Analisi vendite totali per città",y="Vendite dal 2010 al 2014")
+
+
+ggplot(df_elaborato,aes(x="",y=mean_volume,fill=city))+
+  geom_bar(stat="identity", width=1)+
+  coord_polar("y", start=0)+
+  labs(title="Volumi medi mensili per città (Mln $)",y="Media volumi mese per città ")
+```
+<br><br><br>
+
+# 11) Utilizza i boxplot per confrontare la distribuzione del prezzo mediano delle case tra le varie città. Commenta il risultato
+
+<br><br>
+Sotto di seguito la definizione dei grafici previsti : 
+```{r}
+ggplot(dati_immobiliari)+
+          geom_boxplot(aes(x=city,y=median_price))+
+          xlab("Citta")+
+          ylab("Prezzo Mediano di vendita")
+```
+
+<br>
+Negli anni di osservazione, la città che riporta il prezzo piu basso in termini di vendita è "Wichita Falls" mentre quella piu altra è "Bryan-College Station".<br>
+Nel caso della prima la variabilità è inferiore della seconda seppur su una mediana di prezzo molto piu elevata.<br>
+Inoltre nel primo caso la mediana tende ad assestarsi su valori piu vicini al secondo quartile mentre nel secondo la mediana si attesta quasi alla media anche se di poco verso il terzo quartile.  
+<br><br>
+
+# 12) Utilizza i boxplot o qualche variante per confrontare la distribuzione del valore totale delle vendite tra le varie città ma anche tra i vari anni. 
+
+<br><br>
+Sotto di seguito la definizione dei grafici previsti : 
+```{r}
+ # Converto l'anno in fattore in modo che possa usarlo come legenda.
+dati_immobiliari$year <- as.factor(dati_immobiliari$year)
+ggplot(dati_immobiliari)+
+geom_boxplot(aes(x=city,y=volume,fill=year))+
+xlab("Citta")+
+ylab("Volumi totali anno")
+```
+
+La città di Tyler mostra un andamento crescente negli anni generando un volume per anno superiore mediamente per tutte le altre città seppur con una varianza 
+sicuramente inferiore rispetto a quello che si registra a Bryan-College Station (almeno per quest'ultima escludendo l'anno 2011).<br>
+La città invece che mostra i piu bassi volumi è "Wichita Falls" con una variabilità annuale molto piu piccola rispetto alle altre città.<br> 
+Solo nella città di Tyler i volumi tra l'anno 2010 e 2011 risultano essere cresciuti mentre nelle altre città si è registrato un ribasso seppur poi recuperato 
+negli annu successivi.<br>
+L'anno 2014 per la città di Tyler ha registrato il piu alto picco di volume realizzato mediamente negli anni tra le 4 città osservate nei 5 anni.<br>
+L'anno 2011 per Wichita Falls invece rappresenta l'anno con il piu basso volume realizzato di vendita tra le 4 città osservate nei 5 anni.<br>
+
+<br><br>
+
+# 13) Usa un grafico a barre sovrapposte per ogni anno, per confrontare il totale delle vendite nei vari mesi, sempre considerando le città. 
+
+<br><br>
+Sotto di seguito la definizione dei grafici previsti : 
+```{r}
+# Anno - mesi - citta - volume
+dati_immobiliari$month <- as.factor(dati_immobiliari$month)
+ggplot(data = dati_immobiliari)+
+geom_col(aes(x=year,fill=month,y=volume))+
+facet_wrap(~city, nrow = 2) +
+labs(title = "Ripartizione delle Vendite per Anno Città e Mese", x = "Anno", y = "Volume")
+```
+
+Si evince che nella città di Tylet le vendite hanno un tasso di crescita maggiore tendenzialmente concentrate nei mesi finali dell'anno.<br>
+Nell'ultimo anno nei mesi finali di ottobre novembre e dicembre a Tyler i valori sono tra i piu alti di vendite mentre a "Whichita Falls" i valori piu bassi si registrano 
+nel 2011 .
+
+<br><br>
+
+# 14) Crea un line chart di una variabile a tua scelta per fare confronti commentati fra città e periodi storici. 
+<br>
+Di seguito il grafico previsto:
+<br>
+```{r}
+df_elaborato <- dati_immobiliari %>% group_by(city,year) %>% summarise (sum_sales = sum(sales))
+df_elaborato$city <- as.factor(df_elaborato$city)
+df_elaborato$year <- as.numeric(as.character(df_elaborato$year))
+ggplot(data = df_elaborato,aes(x=year,y=sum_sales,color=city))+
+geom_line()+
+labs(title = "Andamento delle vendite per anno delle città ", x = "Anno", y = "Vendite")
+```
+<br>
+Come si evince dai 4 trend di vendita nelle 4 città , la città di Tyler riporta un andamento piu elevato rispetto alle altre seguito dalla città di Beamount seppur quest'ultima negli anni 2011-2013 ha dimostrato un accelerazione maggiore di poco rispetto alle vendite riportate per la città di Tyler seppur in ridotta quantità.
+Cio' si evince dalla ripidità della curva della città di Bryan Collage Station che negli anni 2011-2012-2013 rileva una maggiore ripidità.
