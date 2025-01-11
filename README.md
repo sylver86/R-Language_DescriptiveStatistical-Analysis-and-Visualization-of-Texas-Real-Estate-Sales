@@ -30,6 +30,6 @@ This project navigates through the intricacies of descriptive statistics and vis
 
 ## Explore My Code
 
-🔗 **GitHub Repository:** Dive into the codebase (File .R) to discover how detailed statistical analysis paired with strategic data visualization can uncover fascinating insights into real estate data. This repository offers a comprehensive toolkit for anyone looking to understand or present real estate trends through data.
+🔗 **GitHub Repository:** Dive into the codebase (File .R) to discover how detailed statistical analysis paired with strategic data visualization can uncover fascinating insights into real estate data. 
 
 Feel free to explore, adapt, and enhance the analyses and visualizations presented here to fit your personal or professional needs. Happy exploring!
